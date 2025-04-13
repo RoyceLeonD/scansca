@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:13
@@ -11,9 +9,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    command: >
-      -c shared_preload_libraries=pg_cron
-      -c cron.database_name=antska
+      - ./sql_migrations:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U antska_user -d antska"]
       interval: 10s
@@ -22,3 +18,4 @@ services:
 
 volumes:
   postgres_data:
+    driver: local

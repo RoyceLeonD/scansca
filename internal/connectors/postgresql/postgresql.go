@@ -5,9 +5,14 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-
-	"github.com/royceleond/antska/internal/connectors"
 )
+
+// ResultSet represents a database query result
+type ResultSet struct {
+	Columns []string        `json:"columns"`
+	Rows    [][]interface{} `json:"rows"`
+	Error   string          `json:"error,omitempty"`
+}
 
 // PostgresConnector implements the Connector interface for PostgreSQL
 type PostgresConnector struct {
@@ -149,14 +154,14 @@ func (p *PostgresConnector) GetTableColumns(ctx context.Context, schema, table s
 }
 
 // ExecuteQuery executes a query and returns the results
-func (p *PostgresConnector) ExecuteQuery(ctx context.Context, query string) (connectors.ResultSet, error) {
+func (p *PostgresConnector) ExecuteQuery(ctx context.Context, query string) (ResultSet, error) {
 	if p.pool == nil {
-		return connectors.ResultSet{Error: "not connected to database"}, fmt.Errorf("not connected to database")
+		return ResultSet{Error: "not connected to database"}, fmt.Errorf("not connected to database")
 	}
 
 	rows, err := p.pool.Query(ctx, query)
 	if err != nil {
-		return connectors.ResultSet{Error: err.Error()}, fmt.Errorf("failed to execute query: %w", err)
+		return ResultSet{Error: err.Error()}, fmt.Errorf("failed to execute query: %w", err)
 	}
 	defer rows.Close()
 
@@ -172,7 +177,7 @@ func (p *PostgresConnector) ExecuteQuery(ctx context.Context, query string) (con
 	for rows.Next() {
 		values, err := rows.Values()
 		if err != nil {
-			return connectors.ResultSet{
+			return ResultSet{
 				Columns: columns,
 				Rows:    result,
 				Error:   err.Error(),
@@ -182,14 +187,14 @@ func (p *PostgresConnector) ExecuteQuery(ctx context.Context, query string) (con
 	}
 
 	if rows.Err() != nil {
-		return connectors.ResultSet{
+		return ResultSet{
 			Columns: columns,
 			Rows:    result,
 			Error:   rows.Err().Error(),
 		}, fmt.Errorf("error iterating over results: %w", rows.Err())
 	}
 
-	return connectors.ResultSet{
+	return ResultSet{
 		Columns: columns,
 		Rows:    result,
 	}, nil

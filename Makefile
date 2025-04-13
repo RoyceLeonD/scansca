@@ -26,8 +26,8 @@ test:
 # Run integration tests with database
 test-integration: test-db-up
 	@echo "Running integration tests..."
-	@sleep 3  # Give the database time to start
-	ANTSKA_TEST_DB_HOST=localhost ANTSKA_TEST_DB_PORT=5433 ANTSKA_TEST_DB_USER=test_user ANTSKA_TEST_DB_PASSWORD=test_password ANTSKA_TEST_DB_NAME=antska_test $(GOTEST) -v -tags=integration ./cmd/...
+	@sleep 5  # Give the database time to start
+	ANTSKA_TEST_DB_HOST=127.0.0.1 ANTSKA_TEST_DB_PORT=5433 ANTSKA_TEST_DB_USER=test_user ANTSKA_TEST_DB_PASSWORD=test_password ANTSKA_TEST_DB_NAME=antska_test $(GOTEST) -v -tags=integration ./cmd/... ./internal/...
 	@$(MAKE) test-db-down
 
 # Run code coverage
