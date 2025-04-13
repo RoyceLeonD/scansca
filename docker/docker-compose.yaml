@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: antska
+      POSTGRES_USER: antska_user
+      POSTGRES_PASSWORD: antska_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    command: >
+      -c shared_preload_libraries=pg_cron
+      -c cron.database_name=antska
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U antska_user -d antska"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
