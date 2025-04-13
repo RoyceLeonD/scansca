@@ -1,0 +1,16 @@
+# Antska Configuration
+
+# HTTP server settings
+http:
+  port: 8080
+
+# Configuration directory
+config:
+  dir: "./config"
+
+# Database settings
+databases:
+  # Example PostgreSQL database connection (uncomment to use)
+  # postgres-example:
+  #   type: "postgresql" 
+  #   connection_string: "postgres://antska_user:antska_password@localhost:5432/antska"
