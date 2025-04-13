@@ -21,7 +21,14 @@ build:
 # Run tests
 test:
 	@echo "Running tests..."
-	$(GOTEST) -v ./...
+	$(GOTEST) -v ./cmd/...
+
+# Run integration tests with database
+test-integration: test-db-up
+	@echo "Running integration tests..."
+	@sleep 3  # Give the database time to start
+	ANTSKA_TEST_DB_HOST=localhost ANTSKA_TEST_DB_PORT=5433 ANTSKA_TEST_DB_USER=test_user ANTSKA_TEST_DB_PASSWORD=test_password ANTSKA_TEST_DB_NAME=antska_test $(GOTEST) -v -tags=integration ./cmd/...
+	@$(MAKE) test-db-down
 
 # Run code coverage
 cover:
@@ -66,10 +73,20 @@ docker-up:
 	@echo "Starting Docker containers..."
 	$(DOCKER_COMPOSE) up -d
 
+# Start test database
+test-db-up:
+	@echo "Starting test database..."
+	docker-compose -f docker/docker-compose.test.yaml up -d
+
 # Stop Docker containers
 docker-down:
 	@echo "Stopping Docker containers..."
 	$(DOCKER_COMPOSE) down
+
+# Stop test database
+test-db-down:
+	@echo "Stopping test database..."
+	docker-compose -f docker/docker-compose.test.yaml down
 
 # Clean and rebuild Docker containers
 docker-rebuild:
@@ -94,5 +111,13 @@ generate-docs:
 	@echo "Generating API docs..."
 	swag init -g cmd/antska-server/main.go -o api/docs
 
-# Default target
+# Quick and comprehensive targets
+quick: build test
+
+# Full developer workflow
 all: lint test build
+
+# Get started with development
+dev-setup: docker-up setup
+	@echo "Development environment is set up and ready!"
+	@echo "Run 'make dev' to start the server"

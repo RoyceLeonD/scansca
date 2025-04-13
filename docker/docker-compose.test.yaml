@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  postgres-test:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: antska_test
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+      - ./sql_migrations:/docker-entrypoint-initdb.d
+    command: >
+      -c shared_preload_libraries=pg_cron
+      -c cron.database_name=antska_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d antska_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_test_data:
