@@ -1,59 +1,140 @@
-# Antska - Database Monitoring and Management System
+# Antska - MCP Server for Database Intelligence
 
-Antska is a database monitoring and management system designed to help track, analyze, and maintain your database infrastructure. The system provides automated scanning, reporting, and management capabilities for PostgreSQL databases.
+Antska is a self-hostable Model Context Protocol (MCP) server that bridges diverse database systems with modern Large Language Model (LLM) clients. It empowers technical users to gain deep, integrated insights from heterogeneous data environments through natural language.
 
-## Features
+## Core Features
 
-- **Database Scanning**: Automatically scan databases to gather schema information, table statistics, and column details
-- **Scheduled Jobs**: Schedule recurring scan and report jobs using cron expressions
-- **Service Management**: Register and manage database services in a centralized system
-- **Monitoring Dashboard**: (Planned) Web interface for viewing database metrics and reports
+- **MCP Protocol Support**: Implements the Model Context Protocol for seamless integration with LLM clients
+- **Multi-Database Connectivity**: Connect to PostgreSQL, MySQL, MariaDB, SQLite, and DynamoDB
+- **Unified Query Interface**: Execute complex cross-database queries through a single interface
+- **Schema Introspection**: Automatically discover and expose database structures
+- **Scheduled Operations**: Configure recurring tasks for data monitoring and maintenance
+- **RESTful API**: Comprehensive HTTP API for programmatic interaction
 
-## Technical Stack
+## Architecture
 
-- **Backend**: Go (Golang)
-- **Database**: PostgreSQL with pg_cron extension
-- **Containerization**: Docker and Docker Compose
+Antska consists of several key components:
+
+1. **MCP Server**: Handles client connections and implements the MCP protocol
+2. **Model Context Interface (MCI)**: HTTP API for query execution and resource management
+3. **Antska Management Layer (AML)**: Manages database connections, scheduling, and state
+4. **Database Connectors**: Unified interfaces for different database systems
+
+```
++----------------------------------+
+|          MCP Client              |
+| (LLM Integration, Query requests)|
++----------------+-----------------+
+                 |
+                 v
++----------------------------------+
+|        Antska MCP Server         |
+| (mark3labs/mcp-go SDK integration|
+| tool/resource registration,      |
+| MCP protocol compliance)         |
++----------------+-----------------+
+                 |
+                 v
++----------------------------------+
+|    Model Context Interface (MCI) |
+| (HTTP API: Query execution,      |
+| schema introspection, resource   |
+| management, middleware handling) |
++----------------+-----------------+
+                 |
+                 v
++----------------------------------+
+|    Antska Management Layer (AML) |
+| (Database registration,          |
+| chron scheduling, state handling)|
++----------------+-----------------+
+                 |
+                 v
++----------------------------------+
+|         Database Connectors      |
+|  (Postgres, MariaDB, SQLite,     |
+|    MySQL, DynamoDB connectors)   |
++----------------------------------+
+```
 
 ## Getting Started
 
 ### Prerequisites
 
 - Go 1.22 or higher
-- Docker and Docker Compose
+- Docker and Docker Compose (for running databases locally)
 
-### Setup
+### Installation
 
-1. Clone the repository:
-   ```
-   git clone https://github.com/royceleond/antska.git
-   cd antska
-   ```
+```bash
+# Clone the repository
+git clone https://github.com/royceleond/antska.git
+cd antska
 
-2. Start the PostgreSQL database:
-   ```
-   docker-compose -f docker/docker-compose.yaml up -d
-   ```
+# Install dependencies
+go mod download
 
-3. Run the application:
-   ```
-   go run main.go
-   ```
+# Start the server
+go run cmd/antska-server/main.go
+```
 
-## Project Structure
+## Usage
 
-- `main.go`: Application entry point
-- `src/agent`: Core agent components
-  - `dbManager`: Database connection handling
-  - `scanner`: Database scanning functionality
-  - `serviceManager`: Service and job management
-- `src/dashboard`: (Planned) Web dashboard for monitoring
-- `docker`: Docker configuration and SQL migrations
+### Registering a Database
+
+```bash
+curl -X POST http://localhost:8080/api/v1/databases \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "my-postgres",
+    "type": "postgresql",
+    "connection_string": "postgres://user:password@localhost:5432/dbname"
+  }'
+```
+
+### Executing a Query
+
+```bash
+curl -X POST http://localhost:8080/api/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "database": "my-postgres",
+    "query": "SELECT * FROM users LIMIT 10"
+  }'
+```
+
+### Using with LLM Clients
+
+Antska can be used with any MCP-compatible LLM client. See the [documentation](./documentation) for integration examples.
+
+## Development
+
+### Project Structure
+
+- `cmd/antska-server/` - Server entry point
+- `internal/` - Internal packages
+  - `connectors/` - Database connector implementations
+  - `aml/` - Antska Management Layer
+  - `mci/` - Model Context Interface
+  - `mcp/` - MCP protocol implementation
+- `pkg/` - Public packages for client usage
+- `docker/` - Docker configurations
+- `documentation/` - Project documentation
+
+### Building from Source
+
+```bash
+go build -o antska-server cmd/antska-server/main.go
+```
+
+## Documentation
+
+For detailed documentation, see the [documentation directory](./documentation).
 
 ## License
 
 [MIT License](LICENSE)
 
-## Contact
+## Contributing
 
-For questions or feedback, please contact the project maintainer.
+Contributions are welcome! Please feel free to submit a Pull Request.
