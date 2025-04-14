@@ -6,13 +6,20 @@ import (
 	"github.com/royceleond/antska/internal/connectors/postgresql"
 )
 
-// PostgresConnectorAdapter adapts the PostgreSQL connector to the Connector interface
+// PostgresConnectorAdapter adapts the PostgreSQL connector to the Connector interfaces
 type PostgresConnectorAdapter struct {
 	pg *postgresql.PostgresConnector
 }
 
 // NewPostgresConnector creates a new PostgreSQL connector adapter
 func NewPostgresConnector() Connector {
+	return &PostgresConnectorAdapter{
+		pg: postgresql.NewPostgresConnector(),
+	}
+}
+
+// NewAdvancedPostgresConnector creates a new PostgreSQL connector adapter with the advanced interface
+func NewAdvancedPostgresConnector() AdvancedConnector {
 	return &PostgresConnectorAdapter{
 		pg: postgresql.NewPostgresConnector(),
 	}
@@ -49,9 +56,11 @@ func (a *PostgresConnectorAdapter) ExecuteQuery(ctx context.Context, query strin
 	
 	// Convert the postgresql.ResultSet to connectors.ResultSet
 	return ResultSet{
-		Columns: pgResult.Columns,
-		Rows:    pgResult.Rows,
-		Error:   pgResult.Error,
+		Columns:      pgResult.Columns,
+		Rows:         pgResult.Rows,
+		Error:        pgResult.Error,
+		AffectedRows: pgResult.AffectedRows,
+		ExecutionTime: pgResult.ExecutionTime,
 	}, err
 }
 
@@ -63,6 +72,71 @@ func (a *PostgresConnectorAdapter) GetConnectorType() string {
 // Ping adapts the PostgresConnector.Ping method
 func (a *PostgresConnectorAdapter) Ping(ctx context.Context) error {
 	return a.pg.Ping(ctx)
+}
+
+// AdvancedConnector Interface Methods
+
+// Reconnect implements the AdvancedConnector.Reconnect method
+func (a *PostgresConnectorAdapter) Reconnect(ctx context.Context) error {
+	return a.pg.Reconnect(ctx)
+}
+
+// GetStatus implements the AdvancedConnector.GetStatus method
+func (a *PostgresConnectorAdapter) GetStatus(ctx context.Context) (map[string]interface{}, error) {
+	return a.pg.GetStatus(ctx)
+}
+
+// ListViews implements the AdvancedConnector.ListViews method
+func (a *PostgresConnectorAdapter) ListViews(ctx context.Context, schema string) ([]string, error) {
+	return a.pg.ListViews(ctx, schema)
+}
+
+// GetTableInfo implements the AdvancedConnector.GetTableInfo method
+func (a *PostgresConnectorAdapter) GetTableInfo(ctx context.Context, schema, table string) (*TableInfo, error) {
+	pgTableInfo, err := a.pg.GetTableInfo(ctx, schema, table)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Convert PostgreSQL TableInfo to our interface TableInfo
+	columns := make([]ColumnInfo, len(pgTableInfo.Columns))
+	for i, col := range pgTableInfo.Columns {
+		columns[i] = ColumnInfo{
+			Name:            col.Name,
+			DataType:        col.DataType,
+			IsNullable:      col.IsNullable,
+			DefaultValue:    col.DefaultValue,
+			IsPrimaryKey:    col.IsPrimaryKey,
+			IsForeignKey:    col.IsForeignKey,
+			ReferencesTable: col.ReferencesTable,
+			ReferencesColumn: col.ReferencesColumn,
+		}
+	}
+	
+	return &TableInfo{
+		Schema:           pgTableInfo.Schema,
+		Name:             pgTableInfo.Name,
+		Columns:          columns,
+		PrimaryKey:       pgTableInfo.PrimaryKey,
+		EstimatedRowCount: pgTableInfo.EstimatedRowCount,
+		CreateTime:       pgTableInfo.CreateTime,
+		Description:      pgTableInfo.Description,
+	}, nil
+}
+
+// ExecuteStatement implements the AdvancedConnector.ExecuteStatement method
+func (a *PostgresConnectorAdapter) ExecuteStatement(ctx context.Context, statement string, args ...interface{}) (int64, error) {
+	return a.pg.ExecuteStatement(ctx, statement, args...)
+}
+
+// ExecuteTransaction implements the AdvancedConnector.ExecuteTransaction method
+func (a *PostgresConnectorAdapter) ExecuteTransaction(ctx context.Context, stmts []string) error {
+	return a.pg.ExecuteTransaction(ctx, stmts)
+}
+
+// ExecuteBatch implements the AdvancedConnector.ExecuteBatch method
+func (a *PostgresConnectorAdapter) ExecuteBatch(ctx context.Context, stmts []string) error {
+	return a.pg.ExecuteBatch(ctx, stmts)
 }
 
 // Additional connector creation functions will be added here as they are implemented:
