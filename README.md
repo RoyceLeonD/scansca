@@ -1,6 +1,6 @@
-# Antska - MCP Server for Database Intelligence
+# Scansca - MCP Server for Database Intelligence
 
-Antska is a self-hostable Model Context Protocol (MCP) server that bridges diverse database systems with modern Large Language Model (LLM) clients. It empowers technical users to gain deep, integrated insights from heterogeneous data environments through natural language.
+Scansca is a self-hostable Model Context Protocol (MCP) server that bridges diverse database systems with modern Large Language Model (LLM) clients. It empowers technical users to gain deep, integrated insights from heterogeneous data environments through natural language.
 
 ## Core Features
 
@@ -13,11 +13,11 @@ Antska is a self-hostable Model Context Protocol (MCP) server that bridges diver
 
 ## Architecture
 
-Antska consists of several key components:
+Scansca consists of several key components:
 
 1. **MCP Server**: Handles client connections and implements the MCP protocol
 2. **Model Context Interface (MCI)**: HTTP API for query execution and resource management
-3. **Antska Management Layer (AML)**: Manages database connections, scheduling, and state
+3. **Scansca Management Layer (SML)**: Manages database connections, scheduling, and state
 4. **Database Connectors**: Unified interfaces for different database systems
 
 ```
@@ -28,7 +28,7 @@ Antska consists of several key components:
                  |
                  v
 +----------------------------------+
-|        Antska MCP Server         |
+|        Scansca MCP Server        |
 | (mark3labs/mcp-go SDK integration|
 | tool/resource registration,      |
 | MCP protocol compliance)         |
@@ -44,9 +44,9 @@ Antska consists of several key components:
                  |
                  v
 +----------------------------------+
-|    Antska Management Layer (AML) |
-| (Database registration,          |
-| chron scheduling, state handling)|
+|    Scansca Management Layer (SML) |
+| (Database registration,           |
+| chron scheduling, state handling) |
 +----------------+-----------------+
                  |
                  v
@@ -68,14 +68,14 @@ Antska consists of several key components:
 
 ```bash
 # Clone the repository
-git clone https://github.com/royceleond/antska.git
-cd antska
+git clone https://github.com/royceleond/scansca.git
+cd scansca
 
 # Install dependencies
 go mod download
 
 # Start the server
-go run cmd/antska-server/main.go
+go run cmd/server/main.go
 ```
 
 ## Usage
@@ -105,16 +105,16 @@ curl -X POST http://localhost:8080/api/v1/query \
 
 ### Using with LLM Clients
 
-Antska can be used with any MCP-compatible LLM client. See the [documentation](./documentation) for integration examples.
+Scansca can be used with any MCP-compatible LLM client. See the [documentation](./documentation) for integration examples.
 
 ## Development
 
 ### Project Structure
 
-- `cmd/antska-server/` - Server entry point
+- `cmd/server/` - Server entry point
 - `internal/` - Internal packages
   - `connectors/` - Database connector implementations
-  - `aml/` - Antska Management Layer
+  - `sml/` - Scansca Management Layer
   - `mci/` - Model Context Interface
   - `mcp/` - MCP protocol implementation
 - `pkg/` - Public packages for client usage
@@ -124,7 +124,7 @@ Antska can be used with any MCP-compatible LLM client. See the [documentation](.
 ### Building from Source
 
 ```bash
-go build -o antska-server cmd/antska-server/main.go
+go build -o scansca-server cmd/server/main.go
 ```
 
 ## Documentation

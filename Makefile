@@ -9,14 +9,14 @@ GOMOD = $(GOCMD) mod
 GOTIDY = $(GOCMD) mod tidy
 GOVET = $(GOCMD) vet
 GOFMT = gofmt
-BINARY_NAME = antska-server
+BINARY_NAME = scansca-server
 DOCKER_COMPOSE = docker-compose -f docker/docker-compose.yaml
 
 # Main build target
 build:
-	@echo "Building Antska MCP Server..."
+	@echo "Building Scansca MCP Server..."
 	@mkdir -p bin
-	$(GOBUILD) -o bin/$(BINARY_NAME) ./cmd/antska-server
+	$(GOBUILD) -o bin/$(BINARY_NAME) ./cmd/server
 
 # Run tests
 test:
@@ -24,7 +24,7 @@ test:
 	$(GOTEST) -v ./cmd/...
 
 # Database connection parameters for tests
-DB_TEST_PARAMS = ANTSKA_TEST_DB_HOST=127.0.0.1 ANTSKA_TEST_DB_PORT=5433 ANTSKA_TEST_DB_USER=test_user ANTSKA_TEST_DB_PASSWORD=test_password ANTSKA_TEST_DB_NAME=antska_test
+DB_TEST_PARAMS = SCANSCA_TEST_DB_HOST=127.0.0.1 SCANSCA_TEST_DB_PORT=5433 SCANSCA_TEST_DB_USER=test_user SCANSCA_TEST_DB_PASSWORD=test_password SCANSCA_TEST_DB_NAME=scansca_test
 
 # Run all integration tests with databases
 test-integration: test-db-up test-data-load wait-for-db
@@ -41,24 +41,24 @@ test-postgres: test-db-up test-data-load wait-for-db
 # Run integration tests for MySQL (when implemented)
 test-mysql: test-mysql-up test-mysql-data-load wait-for-mysql
 	@echo "Running MySQL integration tests..."
-	ANTSKA_TEST_DB_HOST=127.0.0.1 ANTSKA_TEST_DB_PORT=3307 ANTSKA_TEST_DB_USER=test_user ANTSKA_TEST_DB_PASSWORD=test_password ANTSKA_TEST_DB_NAME=antska_test $(GOTEST) -v -tags=integration ./internal/connectors/mysql
+	SCANSCA_TEST_DB_HOST=127.0.0.1 SCANSCA_TEST_DB_PORT=3307 SCANSCA_TEST_DB_USER=test_user SCANSCA_TEST_DB_PASSWORD=test_password SCANSCA_TEST_DB_NAME=scansca_test $(GOTEST) -v -tags=integration ./internal/connectors/mysql
 	@$(MAKE) test-mysql-down
 
 # Load test data for PostgreSQL
 test-data-load: wait-for-db
 	@echo "Loading test data into PostgreSQL..."
-	@docker exec -i docker-postgres-test-1 psql -U test_user -d antska_test < docker/test_data/postgresql/init-test-data.sql
+	@docker exec -i docker-postgres-test-1 psql -U test_user -d scansca_test < docker/test_data/postgresql/init-test-data.sql
 
 # Load test data for MySQL (when implemented)
 test-mysql-data-load: wait-for-mysql
 	@echo "Loading test data into MySQL..."
-	@docker exec -i docker-mysql-test-1 mysql -u test_user -ptest_password antska_test < docker/test_data/mysql/init-test-data.sql
+	@docker exec -i docker-mysql-test-1 mysql -u test_user -ptest_password scansca_test < docker/test_data/mysql/init-test-data.sql
 
 # Wait for PostgreSQL to be ready
 wait-for-db:
 	@echo "Waiting for PostgreSQL to be ready..."
 	@for i in 1 2 3 4 5; do \
-		if docker exec docker-postgres-test-1 pg_isready -U test_user -d antska_test > /dev/null 2>&1; then \
+		if docker exec docker-postgres-test-1 pg_isready -U test_user -d scansca_test > /dev/null 2>&1; then \
 			break; \
 		fi; \
 		echo "Waiting for PostgreSQL to start... ($$i/5)"; \
@@ -94,7 +94,7 @@ cover:
 
 # Run application
 run: build
-	@echo "Starting Antska MCP Server..."
+	@echo "Starting Scansca MCP Server..."
 	./bin/$(BINARY_NAME)
 
 # Clean build artifacts
@@ -158,17 +158,22 @@ dev: docker-up
 # Build a release binary
 release-binary:
 	@echo "Building release binary..."
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) -ldflags="-s -w" -o bin/$(BINARY_NAME)-linux-amd64 ./cmd/antska-server
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 $(GOBUILD) -ldflags="-s -w" -o bin/$(BINARY_NAME)-darwin-amd64 ./cmd/antska-server
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 $(GOBUILD) -ldflags="-s -w" -o bin/$(BINARY_NAME)-windows-amd64.exe ./cmd/antska-server
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) -ldflags="-s -w" -o bin/$(BINARY_NAME)-linux-amd64 ./cmd/server
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 $(GOBUILD) -ldflags="-s -w" -o bin/$(BINARY_NAME)-darwin-amd64 ./cmd/server
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 $(GOBUILD) -ldflags="-s -w" -o bin/$(BINARY_NAME)-windows-amd64.exe ./cmd/server
 
 # Generate API documentation
 generate-docs:
 	@echo "Generating API docs..."
-	swag init -g cmd/antska-server/main.go -o api/docs
+	swag init -g cmd/server/main.go -o api/docs
 
 # Quick and comprehensive targets
 quick: build test
+
+# Run migration to new project structure
+migrate:
+	@echo "Running migration to Scansca project structure..."
+	./migrate_to_scansca.sh
 
 # Full developer workflow
 all: lint test build

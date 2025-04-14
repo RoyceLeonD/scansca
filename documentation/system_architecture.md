@@ -1,8 +1,8 @@
-# Antska System Architecture
+# Scansca System Architecture
 
 ## Overview
 
-Antska is designed as a self-hostable Model Context Protocol (MCP) server that bridges the gap between diverse database systems and modern language model (LLM) clients. By implementing the MCP specification, Antska enables LLMs to dynamically interact with database systems through a standardized interface, allowing for complex cross-database queries and intuitive database management.
+Scansca is designed as a self-hostable Model Context Protocol (MCP) server that bridges the gap between diverse database systems and modern language model (LLM) clients. By implementing the MCP specification, Scansca enables LLMs to dynamically interact with database systems through a standardized interface, allowing for complex cross-database queries and intuitive database management.
 
 ## System Architecture
 
@@ -14,7 +14,7 @@ Antska is designed as a self-hostable Model Context Protocol (MCP) server that b
                  |
                  v
 +----------------------------------+
-|        Antska MCP Server         |
+|        Scansca MCP Server        |
 | (mark3labs/mcp-go SDK integration|
 | tool/resource registration,      |
 | MCP protocol compliance)         |
@@ -30,9 +30,9 @@ Antska is designed as a self-hostable Model Context Protocol (MCP) server that b
                  |
                  v
 +----------------------------------+
-|    Antska Management Layer (AML) |
-| (Database registration,          |
-| chron scheduling, state handling)|
+|    Scansca Management Layer (SML) |
+| (Database registration,           |
+| chron scheduling, state handling) |
 +----------------+-----------------+
                  |
                  v
@@ -54,7 +54,7 @@ Antska is designed as a self-hostable Model Context Protocol (MCP) server that b
   - Translating complex data needs into actionable queries
 - **Examples**: LangChain agents, direct LLM integration, custom client applications
 
-### 2. Antska MCP Server
+### 2. Scansca MCP Server
 
 - **Purpose**: Core server component that implements the MCP specification
 - **Responsibilities**:
@@ -81,7 +81,7 @@ Antska is designed as a self-hostable Model Context Protocol (MCP) server that b
   - `/api/v1/schemas` - Retrieve database schema information
   - `/api/v1/jobs` - Manage scheduled database operations
 
-### 4. Antska Management Layer (AML)
+### 4. Scansca Management Layer (SML)
 
 - **Purpose**: Core business logic for database management and operations
 - **Responsibilities**:
@@ -119,7 +119,7 @@ Antska is designed as a self-hostable Model Context Protocol (MCP) server that b
    - Model Context Interface routes the request to appropriate endpoints
 
 3. **Database Operations**:
-   - Antska Management Layer identifies target databases and operations
+   - Scansca Management Layer identifies target databases and operations
    - Database Connectors execute the operations on respective databases
 
 4. **Result Processing**:

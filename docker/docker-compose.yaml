@@ -2,16 +2,16 @@ services:
   postgres:
     image: postgres:13
     environment:
-      POSTGRES_DB: antska
-      POSTGRES_USER: antska_user
-      POSTGRES_PASSWORD: antska_password
+      POSTGRES_DB: scansca
+      POSTGRES_USER: scansca_user
+      POSTGRES_PASSWORD: scansca_password
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./sql_migrations:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U antska_user -d antska"]
+      test: ["CMD-SHELL", "pg_isready -U scansca_user -d scansca"]
       interval: 10s
       timeout: 5s
       retries: 5

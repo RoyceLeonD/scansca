@@ -3,7 +3,7 @@ services:
   postgres-test:
     image: postgres:13
     environment:
-      POSTGRES_DB: antska_test
+      POSTGRES_DB: scansca_test
       POSTGRES_USER: test_user
       POSTGRES_PASSWORD: test_password
     ports:
@@ -13,13 +13,13 @@ services:
       - ./sql_migrations:/docker-entrypoint-initdb.d
       - ./test_data/postgresql:/test_data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U test_user -d antska_test"]
+      test: ["CMD-SHELL", "pg_isready -U test_user -d scansca_test"]
       interval: 5s
       timeout: 3s
       retries: 5
       start_period: 2s
     networks:
-      - antska_test_network
+      - scansca_test_network
     restart: on-failure
 
   # MySQL database for testing (when implemented)
@@ -27,7 +27,7 @@ services:
     image: mysql:8.0
     environment:
       MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_DATABASE: antska_test
+      MYSQL_DATABASE: scansca_test
       MYSQL_USER: test_user
       MYSQL_PASSWORD: test_password
     ports:
@@ -42,13 +42,13 @@ services:
       retries: 5
       start_period: 5s
     networks:
-      - antska_test_network
+      - scansca_test_network
     # Don't start by default - only when needed
     profiles: ["mysql"]
 
 networks:
-  antska_test_network:
-    name: antska_test_network
+  scansca_test_network:
+    name: scansca_test_network
 
 volumes:
   postgres_test_data:

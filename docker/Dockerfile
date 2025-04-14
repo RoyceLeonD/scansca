@@ -16,7 +16,7 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -o antska-server ./cmd/antska-server
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -o scansca-server ./cmd/server
 
 # Use a smaller image for the final build
 FROM alpine:3.19
@@ -28,7 +28,7 @@ RUN apk add --no-cache ca-certificates tzdata
 WORKDIR /app
 
 # Copy binary from builder stage
-COPY --from=builder /app/antska-server .
+COPY --from=builder /app/scansca-server .
 
 # Copy config files if needed
 COPY --from=builder /app/config /app/config
@@ -41,8 +41,8 @@ EXPOSE 9000
 ENV GIN_MODE=release
 
 # Create a non-root user and switch to it
-RUN addgroup -S antska && adduser -S antska -G antska
-USER antska
+RUN addgroup -S scansca && adduser -S scansca -G scansca
+USER scansca
 
 # Run the binary
-CMD ["./antska-server"]
+CMD ["./scansca-server"]

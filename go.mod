@@ -1,4 +1,4 @@
-module github.com/royceleond/antska
+module github.com/royceleond/scansca
 
 go 1.22.0
 

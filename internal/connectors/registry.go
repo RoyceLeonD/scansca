@@ -3,7 +3,7 @@ package connectors
 import (
 	"context"
 
-	"github.com/royceleond/antska/internal/connectors/postgresql"
+	"github.com/royceleond/scansca/internal/connectors/postgresql"
 )
 
 // PostgresConnectorAdapter adapts the PostgreSQL connector to the Connector interfaces
