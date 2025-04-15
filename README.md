@@ -1,68 +1,21 @@
-# Scansca - MCP Server for Database Intelligence
+# Scansca - Database Intelligence Platform
 
-Scansca is a self-hostable Model Context Protocol (MCP) server that bridges diverse database systems with modern Large Language Model (LLM) clients. It empowers technical users to gain deep, integrated insights from heterogeneous data environments through natural language.
+Scansca is a self-hostable server that connects Large Language Model (LLM) clients with database systems through the Model Context Protocol (MCP). It enables technical users to gain integrated insights from diverse data environments using natural language.
 
-## Core Features
+## Features
 
-- **MCP Protocol Support**: Implements the Model Context Protocol for seamless integration with LLM clients
-- **Multi-Database Connectivity**: Connect to PostgreSQL, MySQL, MariaDB, SQLite, and DynamoDB
-- **Unified Query Interface**: Execute complex cross-database queries through a single interface
-- **Schema Introspection**: Automatically discover and expose database structures
-- **Scheduled Operations**: Configure recurring tasks for data monitoring and maintenance
-- **RESTful API**: Comprehensive HTTP API for programmatic interaction
+- **Multi-Database Support**: Connect to PostgreSQL (with MySQL, SQLite, and DynamoDB coming soon)
+- **MCP Integration**: Seamless integration with MCP-compatible LLM clients
+- **Automatic Schema Discovery**: Expose database structures with minimal configuration
+- **Simple API**: RESTful interface for database operations
+- **Docker Ready**: Easy deployment with Docker Compose
 
-## Architecture
-
-Scansca consists of several key components:
-
-1. **MCP Server**: Handles client connections and implements the MCP protocol
-2. **Model Context Interface (MCI)**: HTTP API for query execution and resource management
-3. **Scansca Management Layer (SML)**: Manages database connections, scheduling, and state
-4. **Database Connectors**: Unified interfaces for different database systems
-
-```
-+----------------------------------+
-|          MCP Client              |
-| (LLM Integration, Query requests)|
-+----------------+-----------------+
-                 |
-                 v
-+----------------------------------+
-|        Scansca MCP Server        |
-| (mark3labs/mcp-go SDK integration|
-| tool/resource registration,      |
-| MCP protocol compliance)         |
-+----------------+-----------------+
-                 |
-                 v
-+----------------------------------+
-|    Model Context Interface (MCI) |
-| (HTTP API: Query execution,      |
-| schema introspection, resource   |
-| management, middleware handling) |
-+----------------+-----------------+
-                 |
-                 v
-+----------------------------------+
-|    Scansca Management Layer (SML) |
-| (Database registration,           |
-| chron scheduling, state handling) |
-+----------------+-----------------+
-                 |
-                 v
-+----------------------------------+
-|         Database Connectors      |
-|  (Postgres, MariaDB, SQLite,     |
-|    MySQL, DynamoDB connectors)   |
-+----------------------------------+
-```
-
-## Getting Started
+## Quick Start
 
 ### Prerequisites
 
-- Go 1.22 or higher
-- Docker and Docker Compose (for running databases locally)
+- Go 1.22+
+- Docker and Docker Compose (optional, for database dependencies)
 
 ### Installation
 
@@ -72,15 +25,18 @@ git clone https://github.com/royceleond/scansca.git
 cd scansca
 
 # Install dependencies
-go mod download
+make deps
 
-# Start the server
-go run cmd/server/main.go
+# Start a PostgreSQL database (optional)
+make docker-compose
+
+# Build and run the server
+make run
 ```
 
-## Usage
+## Basic Usage
 
-### Registering a Database
+### Register a Database
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/databases \
@@ -88,48 +44,88 @@ curl -X POST http://localhost:8080/api/v1/databases \
   -d '{
     "name": "my-postgres",
     "type": "postgresql",
-    "connection_string": "postgres://user:password@localhost:5432/dbname"
+    "connection_string": "postgres://scansca_user:scansca_password@localhost:5432/scansca"
   }'
 ```
 
-### Executing a Query
+### Execute a Query
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/query \
   -H "Content-Type: application/json" \
   -d '{
     "database": "my-postgres",
-    "query": "SELECT * FROM users LIMIT 10"
+    "query": "SELECT current_database(), current_user"
   }'
 ```
 
-### Using with LLM Clients
+### Use with LLM Clients
 
-Scansca can be used with any MCP-compatible LLM client. See the [documentation](./documentation) for integration examples.
+For MCP-compatible LLM clients, Scansca exposes endpoints at:
+
+```
+GET  /mcp/v1/tools               # Lists available tools
+POST /mcp/v1/tools/:name/invoke  # Invokes a specific tool
+```
+
+For more information, see the [documentation](docs/getting-started.md).
+
+## Architecture
+
+```
+┌──────────────────────────┐
+│      MCP Client           │
+│  (LLM, CLI, Application)  │
+└──────────────┬───────────┘
+               │
+               ▼
+┌──────────────────────────┐
+│    Scansca MCP Server     │  HTTP API for database operations
+│                           │  and MCP protocol support
+├──────────────────────────┤
+│    Database Connectors    │  Uniform interface for different
+└──────────────┬───────────┘  database systems
+               │
+               ▼
+┌──────────────────────────┐
+│      Database Servers     │
+│  (Postgres, MySQL, etc.)   │
+└──────────────────────────┘
+```
 
 ## Development
 
-### Project Structure
-
-- `cmd/server/` - Server entry point
-- `internal/` - Internal packages
-  - `connectors/` - Database connector implementations
-  - `sml/` - Scansca Management Layer
-  - `mci/` - Model Context Interface
-  - `mcp/` - MCP protocol implementation
-- `pkg/` - Public packages for client usage
-- `docker/` - Docker configurations
-- `documentation/` - Project documentation
-
-### Building from Source
-
 ```bash
-go build -o scansca-server cmd/server/main.go
+# Build the project
+make build
+
+# Run tests
+make test
+
+# Start the server
+make run
+
+# Start PostgreSQL using Docker Compose
+make docker-compose
+
+# Stop Docker Compose services
+make docker-compose-down
 ```
 
-## Documentation
+## Project Structure
 
-For detailed documentation, see the [documentation directory](./documentation).
+```
+scansca/
+├── cmd/          # Application entry point
+├── config/       # Configuration files
+├── docker/       # Docker configurations
+├── docs/         # Documentation
+├── internal/     # Private implementation
+│   ├── db/       # Database connections and models
+│   ├── server/   # HTTP server and API
+│   └── mcp/      # MCP protocol implementation
+└── Makefile      # Build automation
+```
 
 ## License
 

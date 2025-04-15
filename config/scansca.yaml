@@ -1,16 +1,27 @@
-# Scansca Configuration
+# Scansca Server Configuration
 
-# HTTP server settings
-http:
+# Server settings
+server:
+  host: "0.0.0.0"
   port: 8080
+  read_timeout: 15s
+  write_timeout: 15s
+  shutdown_timeout: 5s
 
-# Configuration directory
-config:
-  dir: "./config"
+# Logging
+log:
+  level: "info"  # debug, info, warn, error
+  format: "console"  # console, json
 
-# Database settings
-databases:
-  # Example PostgreSQL database connection (uncomment to use)
-  # postgres-example:
-  #   type: "postgresql" 
-  #   connection_string: "postgres://scansca_user:scansca_password@localhost:5432/scansca"
+# Default database connection pools
+database:
+  max_connections: 10
+  min_connections: 2
+  max_conn_lifetime: 1h
+  max_conn_idle_time: 15m
+
+# Security
+security:
+  enable_cors: true
+  cors_origins: ["*"]
+  enable_auth: false  # Set to true to enable authentication

@@ -5,80 +5,16 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	
+	"github.com/royceleond/scansca/internal/db"
 )
 
-// ResultSet represents a database query result
-type ResultSet struct {
-	Columns []string        `json:"columns"`
-	Rows    [][]interface{} `json:"rows"`
-	Error   string          `json:"error,omitempty"`
-	// Additional metadata about the query
-	AffectedRows int64     `json:"affected_rows,omitempty"`
-	ExecutionTime float64  `json:"execution_time,omitempty"` // in seconds
-}
-
-// ColumnInfo contains detailed information about a database column
-type ColumnInfo struct {
-	Name          string `json:"name"`
-	DataType      string `json:"data_type"`
-	IsNullable    bool   `json:"is_nullable"`
-	DefaultValue  string `json:"default_value,omitempty"`
-	IsPrimaryKey  bool   `json:"is_primary_key"`
-	IsForeignKey  bool   `json:"is_foreign_key"`
-	ReferencesTable string `json:"references_table,omitempty"`
-	ReferencesColumn string `json:"references_column,omitempty"`
-}
-
-// TableInfo contains detailed information about a database table
-type TableInfo struct {
-	Schema      string      `json:"schema"`
-	Name        string      `json:"name"`
-	Columns     []ColumnInfo `json:"columns"`
-	PrimaryKey  []string    `json:"primary_key,omitempty"`
-	EstimatedRowCount int64   `json:"estimated_row_count"`
-	CreateTime  time.Time   `json:"create_time"`
-	Description string      `json:"description,omitempty"`
-}
-
-// ConnectionConfig holds configuration options for the PostgreSQL connector
-type ConnectionConfig struct {
-	MaxConnections int
-	MinConnections int
-	MaxConnLifetime time.Duration
-	MaxConnIdleTime time.Duration
-}
-
-// DefaultConnectionConfig returns a default configuration for PostgreSQL connections
-func DefaultConnectionConfig() ConnectionConfig {
-	return ConnectionConfig{
-		MaxConnections: 10,
-		MinConnections: 2,
-		MaxConnLifetime: 1 * time.Hour,
-		MaxConnIdleTime: 15 * time.Minute,
-	}
-}
-
-// PostgresConnector implements the Connector interface for PostgreSQL
+// PostgresConnector implements the db.Connector interface for PostgreSQL
 type PostgresConnector struct {
-	pool *pgxpool.Pool
-	config ConnectionConfig
+	pool             *pgxpool.Pool
+	Config           db.ConnectionPoolConfig
 	connectionString string
-}
-
-// NewPostgresConnector creates a new PostgreSQL connector
-func NewPostgresConnector() *PostgresConnector {
-	return &PostgresConnector{
-		config: DefaultConnectionConfig(),
-	}
-}
-
-// NewPostgresConnectorWithConfig creates a new PostgreSQL connector with custom configuration
-func NewPostgresConnectorWithConfig(config ConnectionConfig) *PostgresConnector {
-	return &PostgresConnector{
-		config: config,
-	}
 }
 
 // Connect establishes a connection to the PostgreSQL database
@@ -90,10 +26,10 @@ func (p *PostgresConnector) Connect(ctx context.Context, connectionString string
 	}
 
 	// Apply custom configuration
-	config.MaxConns = int32(p.config.MaxConnections)
-	config.MinConns = int32(p.config.MinConnections)
-	config.MaxConnLifetime = p.config.MaxConnLifetime
-	config.MaxConnIdleTime = p.config.MaxConnIdleTime
+	config.MaxConns = int32(p.Config.MaxConnections)
+	config.MinConns = int32(p.Config.MinConnections)
+	config.MaxConnLifetime = p.Config.MaxConnLifetime
+	config.MaxConnIdleTime = p.Config.MaxConnIdleTime
 
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
@@ -119,22 +55,16 @@ func (p *PostgresConnector) Disconnect(ctx context.Context) error {
 	return nil
 }
 
-// Reconnect attempts to reconnect to the database using the stored connection string
-func (p *PostgresConnector) Reconnect(ctx context.Context) error {
-	if p.connectionString == "" {
-		return fmt.Errorf("no previous connection string available")
+// Ping checks if the database connection is alive
+func (p *PostgresConnector) Ping(ctx context.Context) error {
+	if p.pool == nil {
+		return fmt.Errorf("not connected to database")
 	}
-	
-	if p.pool != nil {
-		p.pool.Close()
-		p.pool = nil
-	}
-	
-	return p.Connect(ctx, p.connectionString)
+	return p.pool.Ping(ctx)
 }
 
 // GetStatus returns the current status of the database connection
-func (p *PostgresConnector) GetStatus(ctx context.Context) (map[string]interface{}, error) {
+func (p *PostgresConnector) GetStatus(ctx context.Context) (*db.DatabaseStatus, error) {
 	if p.pool == nil {
 		return nil, fmt.Errorf("not connected to database")
 	}
@@ -148,12 +78,13 @@ func (p *PostgresConnector) GetStatus(ctx context.Context) (map[string]interface
 		return nil, fmt.Errorf("failed to get database version: %w", err)
 	}
 	
-	return map[string]interface{}{
-		"acquired_connections": stats.AcquiredConns(),
-		"idle_connections": stats.IdleConns(),
-		"total_connections": stats.TotalConns(),
-		"max_connections": p.config.MaxConnections,
-		"database_version": version,
+	return &db.DatabaseStatus{
+		Connected:       true,
+		AcquiredConns:   int(stats.AcquiredConns()),
+		IdleConns:       int(stats.IdleConns()),
+		TotalConns:      int(stats.TotalConns()),
+		MaxConns:        p.Config.MaxConnections,
+		DatabaseVersion: version,
 	}, nil
 }
 
@@ -292,7 +223,7 @@ func (p *PostgresConnector) GetTableColumns(ctx context.Context, schema, table s
 }
 
 // GetTableInfo returns detailed information about a table
-func (p *PostgresConnector) GetTableInfo(ctx context.Context, schema, table string) (*TableInfo, error) {
+func (p *PostgresConnector) GetTableInfo(ctx context.Context, schema, table string) (*db.TableInfo, error) {
 	if p.pool == nil {
 		return nil, fmt.Errorf("not connected to database")
 	}
@@ -342,11 +273,11 @@ func (p *PostgresConnector) GetTableInfo(ctx context.Context, schema, table stri
 	}
 	defer rows.Close()
 
-	var columns []ColumnInfo
+	var columns []db.ColumnInfo
 	var primaryKey []string
 
 	for rows.Next() {
-		var col ColumnInfo
+		var col db.ColumnInfo
 		var defaultValue *string
 		var referencesTable, referencesColumn *string
 
@@ -404,7 +335,7 @@ func (p *PostgresConnector) GetTableInfo(ctx context.Context, schema, table stri
 		return nil, fmt.Errorf("failed to get table statistics: %w", err)
 	}
 
-	tableInfo := &TableInfo{
+	tableInfo := &db.TableInfo{
 		Schema:     schema,
 		Name:       table,
 		Columns:    columns,
@@ -421,16 +352,16 @@ func (p *PostgresConnector) GetTableInfo(ctx context.Context, schema, table stri
 }
 
 // ExecuteQuery executes a query and returns the results
-func (p *PostgresConnector) ExecuteQuery(ctx context.Context, query string) (ResultSet, error) {
+func (p *PostgresConnector) ExecuteQuery(ctx context.Context, query string, args ...interface{}) (db.ResultSet, error) {
 	if p.pool == nil {
-		return ResultSet{Error: "not connected to database"}, fmt.Errorf("not connected to database")
+		return db.ResultSet{Error: "not connected to database"}, fmt.Errorf("not connected to database")
 	}
 
 	startTime := time.Now()
 	
-	rows, err := p.pool.Query(ctx, query)
+	rows, err := p.pool.Query(ctx, query, args...)
 	if err != nil {
-		return ResultSet{Error: err.Error()}, fmt.Errorf("failed to execute query: %w", err)
+		return db.ResultSet{Error: err.Error()}, fmt.Errorf("failed to execute query: %w", err)
 	}
 	defer rows.Close()
 
@@ -446,7 +377,7 @@ func (p *PostgresConnector) ExecuteQuery(ctx context.Context, query string) (Res
 	for rows.Next() {
 		values, err := rows.Values()
 		if err != nil {
-			return ResultSet{
+			return db.ResultSet{
 				Columns: columns,
 				Rows:    result,
 				Error:   err.Error(),
@@ -457,7 +388,7 @@ func (p *PostgresConnector) ExecuteQuery(ctx context.Context, query string) (Res
 	}
 
 	if rows.Err() != nil {
-		return ResultSet{
+		return db.ResultSet{
 			Columns: columns,
 			Rows:    result,
 			Error:   rows.Err().Error(),
@@ -468,7 +399,7 @@ func (p *PostgresConnector) ExecuteQuery(ctx context.Context, query string) (Res
 	// Calculate execution time
 	executionTime := time.Since(startTime).Seconds()
 
-	return ResultSet{
+	return db.ResultSet{
 		Columns: columns,
 		Rows:    result,
 		AffectedRows: int64(len(result)),
@@ -523,39 +454,7 @@ func (p *PostgresConnector) ExecuteTransaction(ctx context.Context, stmts []stri
 	return nil
 }
 
-// ExecuteBatch executes multiple statements efficiently using a batch
-func (p *PostgresConnector) ExecuteBatch(ctx context.Context, stmts []string) error {
-	if p.pool == nil {
-		return fmt.Errorf("not connected to database")
-	}
-
-	batch := &pgx.Batch{}
-	for _, stmt := range stmts {
-		batch.Queue(stmt)
-	}
-
-	results := p.pool.SendBatch(ctx, batch)
-	defer results.Close()
-
-	for i := 0; i < batch.Len(); i++ {
-		_, err := results.Exec()
-		if err != nil {
-			return fmt.Errorf("batch execution failed at statement %d: %w", i, err)
-		}
-	}
-
-	return nil
-}
-
 // GetConnectorType returns the type of the connector
 func (p *PostgresConnector) GetConnectorType() string {
 	return "postgresql"
-}
-
-// Ping checks if the database connection is alive
-func (p *PostgresConnector) Ping(ctx context.Context) error {
-	if p.pool == nil {
-		return fmt.Errorf("not connected to database")
-	}
-	return p.pool.Ping(ctx)
 }
