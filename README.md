@@ -1,4 +1,4 @@
-# Scansca - Database Intelligence Platform
+# Scansca - MCP Database Connector (under-development)
 
 Scansca is a self-hostable server that connects Large Language Model (LLM) clients with database systems through the Model Context Protocol (MCP). It enables technical users to gain integrated insights from diverse data environments using natural language.
 
@@ -142,7 +142,12 @@ scansca/
 
 ## License
 
-[MIT License](LICENSE)
+This project is licensed under the [Scansca Software License](LICENSE) which allows:
+
+- Free use for non-commercial purposes, non-profits, and small entities (less than $10,000 USD in revenue/assets)
+- Commercial and government use requires a separate license from the author
+
+Please see the LICENSE file for complete details.
 
 ## Contributing
 

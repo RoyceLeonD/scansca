@@ -47,7 +47,7 @@ Scansca is designed as a self-hostable Model Context Protocol (MCP) server that 
 
 ### 1. MCP Client
 
-- **Purpose**: External LLM clients that communicate with Antska using the MCP protocol
+- **Purpose**: External LLM clients that communicate with Scansca using the MCP protocol
 - **Responsibilities**:
   - Making query requests in natural language
   - Processing structured responses from the MCP server
@@ -111,18 +111,22 @@ Scansca is designed as a self-hostable Model Context Protocol (MCP) server that 
 ## Data Flow
 
 1. **Query Initiation**:
+
    - LLM client sends a natural language query via MCP protocol
    - MCP Server receives and processes the query
 
 2. **Query Processing**:
+
    - MCP Server translates the natural language query to structured operations
    - Model Context Interface routes the request to appropriate endpoints
 
 3. **Database Operations**:
+
    - Scansca Management Layer identifies target databases and operations
    - Database Connectors execute the operations on respective databases
 
 4. **Result Processing**:
+
    - Database results are collected and normalized
    - MCI formats the results according to the request specifications
 
