@@ -1,0 +1,81 @@
+site_name: Scansca Documentation
+site_description: Documentation for Scansca - MCP Server for Database Intelligence
+site_url: https://example.com/
+docs_dir: /content
+
+# Repository
+repo_name: royceleond/antska
+repo_url: https://github.com/royceleond/antska
+
+# Copyright
+copyright: Copyright &copy; 2025
+
+# Theme configuration
+theme:
+  name: material
+  language: en
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+
+# Plugins
+plugins:
+  - search
+
+# Markdown extensions
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      linenums: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator:
+        !!python/name:material.extensions.emoji.to_svg # Navigation structure
+
+nav:
+  - Home: "README.md"
+  - Getting Started:
+      - Installation & Setup: "getting-started.md"
+      - Makefile Reference: "makefile-reference.md"
+  - Guides:
+      - System Architecture: "system_architecture.md"
+      - MCP Integration: "mcp_integration.md"
+      - API Reference: "api.md"
+  - Reference:
+      - Tech Stack: "tech_stack.md"
+      - Development Plan: "plan.md"
+      - Use Cases: "use_cases.md"

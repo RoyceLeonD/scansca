@@ -35,6 +35,7 @@ Thumbs.db
 /coverage/
 /dist/
 /tmp/
+/node_modules/
 
 # Database files
 *.db

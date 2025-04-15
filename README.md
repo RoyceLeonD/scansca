@@ -68,7 +68,17 @@ GET  /mcp/v1/tools               # Lists available tools
 POST /mcp/v1/tools/:name/invoke  # Invokes a specific tool
 ```
 
-For more information, see the [documentation](docs/getting-started.md).
+### Documentation
+
+View the documentation by running:
+
+```bash
+make docs
+```
+
+This will start a documentation server on port 8080 (configurable with DOCS_PORT).
+
+For more information, see the [online documentation](docs/getting-started.md).
 
 ## Architecture
 
@@ -110,6 +120,9 @@ make docker-compose
 
 # Stop Docker Compose services
 make docker-compose-down
+
+# Start documentation server
+make docs
 ```
 
 ## Project Structure
