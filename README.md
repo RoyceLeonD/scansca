@@ -123,7 +123,27 @@ make docker-compose-down
 
 # Start documentation server
 make docs
+
+# Build and publish documentation to a Docker registry
+make docs-publish
 ```
+
+### Environment Configuration
+
+For sensitive settings like Docker registry URLs, Scansca uses a `.env` file that is not tracked by git:
+
+1. Copy the template file to create your configuration:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Edit the `.env` file with your settings:
+   ```
+   # Registry settings - Replace with your actual values
+   DOCKER_REGISTRY=docker.your-company.com
+   ```
+
+3. The Makefile will automatically load these settings when you run make commands
 
 ## Project Structure
 
