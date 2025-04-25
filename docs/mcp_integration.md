@@ -1,301 +1,171 @@
 # MCP Integration Guide
 
-This document explains how Scansca implements the Model Context Protocol (MCP) to enable seamless integration between LLM clients and database systems.
+Antska makes your databases accessible to Large Language Models (LLMs) through the Model Context Protocol (MCP). This guide shows you how to use these capabilities in your applications.
 
-## What is the Model Context Protocol (MCP)?
+## What is the Model Context Protocol?
 
-The Model Context Protocol (MCP) is a standardized protocol for enabling LLMs to interact with external tools and data sources. It allows LLMs to:
+The Model Context Protocol (MCP) is an open standard that allows LLMs to interact with external tools and data. Think of it as a universal connector between AI and data sources.
 
-1. Discover available tools and resources
-2. Invoke operations on these resources
-3. Access structured data in a consistent format
-4. Maintain context across interactions
+With MCP, your LLM applications can:
 
-By implementing MCP, Antska provides a standardized way for any LLM client to interact with database systems, without requiring custom integration for each LLM provider.
+- **Discover** what databases and tools are available
+- **Query** those databases directly
+- **Receive** structured data in a consistent format
+- **Maintain** context across multiple interactions
 
-## Antska MCP Implementation
+Antska implements MCP so you can connect any compatible LLM to your databases without custom integration work.
 
-Antska implements the MCP specification using a custom implementation with Server-Sent Events (SSE) for streaming. This provides a lightweight, standard-compliant way to build MCP servers in Go without external dependencies.
+## Connecting LLMs to Databases
 
-### MCP Architecture
+Antska connects LLMs to databases through a simple, standardized interface:
 
-Antska's MCP implementation consists of several key components:
+![Antska Architecture](https://raw.githubusercontent.com/royceleond/scansca/main/docs/assets/mcp-architecture.png)
 
-1. **MCPServer**: The core server that manages SSE connections and HTTP handlers
-2. **ConnectorRegistry**: Registry for database connectors that allows creating connections to databases
-3. **Connector Interface**: Interface that database drivers implement to provide standardized access
-4. **Tool Registry**: Manages available MCP tools and their handlers
+1. **LLM clients** send requests to Antska's MCP server
+2. **Antska** processes those requests and connects to the appropriate database
+3. **Databases** return data which Antska formats and returns to the client
 
-The architecture allows for:
+Antska supports real-time data streaming using Server-Sent Events (SSE), making it ideal for interactive LLM applications.
 
-1. **Database Connectors**: Each connected database can be accessed via the connector registry
-2. **Query Tools**: Tools for executing queries against databases
-3. **Schema Tools**: Tools for exploring database schemas
-4. **Management Tools**: Tools for managing database connections and jobs
+## Getting Started
 
-Example of the MCPServer implementation:
+### 1. Start the Antska Server
 
-```go
-// MCPServer represents the MCP server implementation
-type MCPServer struct {
-    addr          string
-    dbRegistry    ConnectorRegistry
-    clients       sync.Map
-    clientCounter int
-}
+```bash
+# Using docker-compose
+docker-compose up -d
 
-// NewMCPServer creates a new MCP server instance
-func NewMCPServer(host string, port int, registry ConnectorRegistry) *MCPServer {
-    return &MCPServer{
-        addr:         fmt.Sprintf("%s:%d", host, port),
-        dbRegistry:   registry,
-        clients:      sync.Map{},
-    }
-}
-
-// Start starts the MCP server
-func (s *MCPServer) Start() error {
-    mux := http.NewServeMux()
-    
-    // SSE endpoint for tool events
-    mux.HandleFunc("/sse", s.handleSSE)
-    
-    // HTTP endpoints for tool calls
-    mux.HandleFunc("/api/v1/tools/execute_query", s.handleExecuteQueryHTTP)
-    mux.HandleFunc("/api/v1/tools/list_schemas", s.handleListSchemasHTTP)
-    mux.HandleFunc("/api/v1/tools/list_tables", s.handleListTablesHTTP)
-    mux.HandleFunc("/api/v1/tools/get_table_info", s.handleGetTableInfoHTTP)
-    
-    // Tool discovery endpoint
-    mux.HandleFunc("/api/v1/tools", s.handleToolDiscoveryHTTP)
-    
-    log.Printf("Starting MCP server on %s\n", s.addr)
-    return http.ListenAndServe(s.addr, mux)
-}
+# Or using the binary
+./bin/scansca
 ```
 
-### MCP Tool Registration
+### 2. Register a Database
 
-Antska registers tools that LLMs can invoke to perform operations on databases:
-
-```go
-// ToolRegistry holds available MCP tools
-type ToolRegistry struct {
-    tools          map[string]Tool
-    connectorMgr   ConnectorManager
-}
-
-// Tool represents an MCP tool
-type Tool struct {
-    Name        string      `json:"name"`
-    Description string      `json:"description"`
-    Parameters  interface{} `json:"parameters"`
-    Handler     ToolHandler
-}
-
-// registerDefaultTools registers the standard MCP tools
-func (r *ToolRegistry) registerDefaultTools() {
-    // Database query tool
-    r.Register(Tool{
-        Name:        "execute_query",
-        Description: "Execute a SQL query on a registered database",
-        Parameters: map[string]interface{}{
-            "database": map[string]string{
-                "type":        "string",
-                "description": "Database name",
-            },
-            "query": map[string]string{
-                "type":        "string",
-                "description": "SQL query to execute",
-            },
-            "params": map[string]string{
-                "type":        "array",
-                "description": "Query parameters (optional)",
-            },
-        },
-        Handler: r.handleExecuteQuery,
-    })
-
-    // Register other tools...
-}
+```bash
+curl -X POST http://localhost:8080/api/v1/databases \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "my-postgres",
+    "type": "postgresql",
+    "connection_string": "postgres://user:password@localhost:5432/mydb"
+  }'
 ```
 
-### MCP Request Flow
+### 3. Integrate with Your LLM Application
 
-When a client sends an MCP request to Antska, the following flow occurs:
+Antska provides two integration methods:
 
-1. The HTTP request is received by the appropriate endpoint handler
-2. The handler parses the request parameters and validates them
-3. The handler calls the corresponding tool handler function
-4. The tool handler retrieves the appropriate database connector from the registry
-5. The connector executes the requested operation on the database
-6. Results are formatted as JSON and returned to the client
-7. For SSE clients, events are also pushed via the event stream
-
-Here's a simplified example of an HTTP handler:
-
-```go
-// handleExecuteQueryHTTP handles execute_query tool calls
-func (s *MCPServer) handleExecuteQueryHTTP(w http.ResponseWriter, r *http.Request) {
-    if r.Method != http.MethodPost {
-        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-        return
-    }
-    
-    // Read and parse request body
-    body, err := io.ReadAll(r.Body)
-    if err != nil {
-        http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
-        return
-    }
-    
-    var params ExecuteQueryRequest
-    if err := json.Unmarshal(body, &params); err != nil {
-        http.Error(w, fmt.Sprintf("Invalid request format: %v", err), http.StatusBadRequest)
-        return
-    }
-    
-    // Execute query
-    result, err := s.handleExecuteQuery(r.Context(), body)
-    if err != nil {
-        http.Error(w, fmt.Sprintf("Error executing query: %v", err), http.StatusInternalServerError)
-        return
-    }
-    
-    // Return result
-    w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(map[string]interface{}{
-        "status": "success",
-        "result": result,
-    })
-}
-```
-
-## Integration Examples
-
-### Example 1: Querying a Database
-
-An LLM client might make an HTTP POST request to the execute_query endpoint:
-
-```http
-POST /api/v1/tools/execute_query HTTP/1.1
-Host: antska.example.com
-Content-Type: application/json
-
-{
-  "database": "postgres-main",
-  "query": "SELECT * FROM users LIMIT 10"
-}
-```
-
-Antska processes this request and returns the results in a structured format:
-
-```json
-{
-  "status": "success",
-  "result": {
-    "columns": ["id", "name", "email", "created_at"],
-    "rows": [
-      [1, "John Doe", "john@example.com", "2023-01-01T00:00:00Z"],
-      [2, "Jane Smith", "jane@example.com", "2023-01-02T00:00:00Z"],
-      ...
-    ],
-    "count": 10,
-    "duration": "10.245ms"
-  }
-}
-```
-
-### Example 2: Schema Exploration
-
-An LLM client might make an HTTP POST request to list the tables in a schema:
-
-```http
-POST /api/v1/tools/list_tables HTTP/1.1
-Host: antska.example.com
-Content-Type: application/json
-
-{
-  "database": "postgres-main",
-  "schema": "public"
-}
-```
-
-Antska would return:
-
-```json
-{
-  "status": "success",
-  "result": {
-    "database": "postgres-main",
-    "schema": "public",
-    "tables": ["users", "orders", "products", "categories"],
-    "views": ["active_users", "order_summary"]
-  }
-}
-```
-
-## Client Implementation Guide
-
-To interact with Antska from your LLM application:
-
-1. Use standard HTTP clients to make POST requests to the tool endpoints
-2. Discover available tools via the `/api/v1/tools` endpoint
-3. Generate appropriate tool calls based on user requests
-4. Process tool responses and present results
-5. For event streaming, connect to the SSE endpoint
-
-Example using standard HTTP requests:
+#### Option A: Direct HTTP Requests
 
 ```python
 import requests
-import json
 
-# Get available tools
-tools_response = requests.get("https://antska.example.com/api/v1/tools")
-tools = tools_response.json()["tools"]
-
-# Execute a database query
-query_response = requests.post(
-    "https://antska.example.com/api/v1/tools/execute_query",
+# Execute a SQL query
+response = requests.post(
+    "http://localhost:8080/api/v1/tools/execute_query",
     json={
-        "database": "postgres-main",
+        "database": "my-postgres",
         "query": "SELECT * FROM users LIMIT 10"
     }
 )
 
-# Process and display results
-result = query_response.json()["result"]
-print(json.dumps(result, indent=2))
+results = response.json()
+print(f"Found {len(results['result']['rows'])} users")
 ```
 
-Example of connecting to the SSE endpoint:
+#### Option B: Server-Sent Events for Streaming
 
 ```javascript
-// Browser example
-const eventSource = new EventSource('https://antska.example.com/sse');
+// Connect to the SSE endpoint
+const eventSource = new EventSource('http://localhost:8080/sse');
 
-eventSource.addEventListener('init', (event) => {
-  const data = JSON.parse(event.data);
-  console.log('Connected to Antska MCP server:', data);
-});
-
+// Listen for events
 eventSource.addEventListener('query_result', (event) => {
-  const result = JSON.parse(event.data);
-  console.log('Query result received:', result);
+  const data = JSON.parse(event.data);
+  console.log(`Received ${data.count} rows`);
+  updateUI(data.rows);
 });
 
-eventSource.addEventListener('error', (e) => {
-  console.error('SSE connection error:', e);
-});
+// Send a query
+function executeQuery(database, query) {
+  fetch('/api/v1/tools/execute_query', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ database, query })
+  });
+}
 ```
+
+## Available Tools
+
+Antska provides these database tools for LLMs:
+
+| Tool | Description | Example Use |
+|------|-------------|-------------|
+| `execute_query` | Run SQL queries | "Show me the top 10 users by activity" |
+| `list_schemas` | List available schemas | "What schemas are in this database?" |
+| `list_tables` | List tables in a schema | "Show me tables in the public schema" |
+| `get_table_info` | Get table structure | "What columns are in the users table?" |
+
+## Example: Database Exploration Workflow
+
+Here's how an LLM might explore a database using Antska:
+
+1. **List available databases**
+   ```json
+   GET /api/v1/databases
+   ```
+
+2. **Discover schemas in a database**
+   ```json
+   POST /api/v1/tools/list_schemas
+   {
+     "database": "my-postgres"
+   }
+   ```
+
+3. **Find tables in a schema**
+   ```json
+   POST /api/v1/tools/list_tables
+   {
+     "database": "my-postgres",
+     "schema": "public"
+   }
+   ```
+
+4. **Examine table structure**
+   ```json
+   POST /api/v1/tools/get_table_info
+   {
+     "database": "my-postgres",
+     "schema": "public",
+     "table": "users"
+   }
+   ```
+
+5. **Query the table**
+   ```json
+   POST /api/v1/tools/execute_query
+   {
+     "database": "my-postgres",
+     "query": "SELECT id, name, email FROM users WHERE active = true LIMIT 5"
+   }
+   ```
 
 ## Best Practices
 
-1. **Connection Management**: For long-running processes, use the SSE endpoint for real-time updates
-2. **Error Handling**: Always check the status field in responses and handle errors appropriately
-3. **Parameter Validation**: Validate parameters before sending requests to avoid validation errors
-4. **Authentication**: Include authentication headers with requests when required
-5. **Rate Limiting**: Respect rate limits to prevent service degradation
-6. **Performance**: Use query parameters to limit result sets when dealing with large data
-7. **Persistence**: Store connection information and reuse database connections when possible
+To get the most out of Antska with LLMs:
+
+1. **Start simple**: Begin with basic database queries before complex operations
+2. **Use limits**: Always limit query results to prevent overwhelming responses
+3. **Handle errors**: Check status codes and error messages in responses
+4. **Stream large results**: Use SSE for queries that might return large datasets
+5. **Cache metadata**: Store database structure information to reduce repeated calls
+6. **Secure connections**: Use authentication and encryption in production environments
+
+## Need Help?
+
+- **Documentation**: Full [API Reference](api.md)  
+- **Examples**: See [example clients](https://github.com/royceleond/scansca/tree/main/examples)
+- **Community**: Join our [Discord](https://discord.gg/antska)
+- **Issues**: Report bugs on [GitHub](https://github.com/royceleond/scansca/issues)
